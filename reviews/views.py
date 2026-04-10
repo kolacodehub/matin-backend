@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
+from .utils import get_next_midnight_for_user
 from .models import Reflection, ReviewLog
 from .serializers import ReflectionIngestionSerializer
 
@@ -27,7 +28,7 @@ class IngestReflectionView(APIView):
                     user=request.user,
                     ayah_key=serializer.validated_data["ayah_key"],
                     reflection_text=serializer.validated_data["reflection_text"],
-                    next_review_date=timezone.now() + timedelta(hours=24),
+                    next_review_date=get_next_midnight_for_user(request.user),
                     total_points_earned=INGESTION_REWARD,
                 )
 

@@ -19,6 +19,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
+    timezone = models.CharField(max_length=50, default="UTC")
     # The 'sub' claim from the Quran Foundation ID Token
     qf_sub_id = models.CharField(max_length=255, unique=True, primary_key=True)
 
