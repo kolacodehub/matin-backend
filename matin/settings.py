@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",  # For our local API tokens
     # Local Apps
     "accounts",
+    "reviews",
 ]
 
 MIDDLEWARE = [
