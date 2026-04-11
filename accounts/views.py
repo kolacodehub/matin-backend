@@ -123,3 +123,31 @@ class QFAuthExchangeView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+from django.shortcuts import redirect
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+def qf_login_redirect(request):
+    # In the future, this will redirect to: https://quran.foundation/oauth/authorize?...
+    # For today, we will simulate QF succeeding and sending you straight to the callback.
+    return redirect("http://localhost:8000/api/v1/callback/?code=mock_qf_code_123")
+
+
+def qf_callback(request):
+    # 1. In production, you will exchange the 'code' for a real QF user profile.
+    # For now, we will instantly grab (or create) your test user.
+    user, created = User.objects.get_or_create(
+        qf_sub_id="mock_test_user_123",
+        defaults={"timezone": "Africa/Lagos"},
+    )
+
+    # 2. Generate or fetch the secure Django Auth Token for this user
+    token, _ = Token.objects.get_or_create(user=user)
+
+    # 3. The Final Pass: Redirect BACK to your React App with the token attached
+    return redirect(f"http://localhost:5173/auth/callback?token={token.key}")
