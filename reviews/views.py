@@ -1,13 +1,17 @@
+import datetime
+import traceback
+from zoneinfo import ZoneInfo
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
+from django.shortcuts import get_object_or_404
+from .serializers import ReflectionIngestionSerializer, ReflectionQueueSerializer
 from .utils import get_next_midnight_for_user
 from .models import Reflection, ReviewLog
-from .serializers import ReflectionIngestionSerializer
 
 
 class IngestReflectionView(APIView):
@@ -41,12 +45,11 @@ class IngestReflectionView(APIView):
                     was_in_grace_period=False,
                 )
 
-        except Exception as e:
-            import traceback
+        except Exception:
             traceback.print_exc()  # prints full traceback to terminal
             return Response(
                 {"error": "Database transaction failed."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         return Response(
@@ -58,3 +61,103 @@ class IngestReflectionView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class GradeReviewView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        item_id = request.data.get("item_id")
+        grade = request.data.get("grade")
+
+        if grade not in [0, 1, 2, 3]:
+            return Response(
+                {"error": "Grade must be exactly 0, 1, 2, or 3."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        item = get_object_or_404(Reflection, id=item_id, user=request.user)
+
+        # 1. Base Economy Setup
+        BASE_REWARD = 2
+        points_earned = BASE_REWARD * grade if grade > 0 else 0
+
+        # 2. The SuperMemo-2 (SM-2) Algorithm (Fixed 'interval_days' to 'interval')
+        if grade == 0:
+            item.repetitions = 0
+            item.interval = 0
+            item.ease_factor = max(1.3, item.ease_factor - 0.2)
+        elif grade == 1:
+            item.repetitions = 0
+            item.interval = 1
+            item.ease_factor = max(1.3, item.ease_factor - 0.15)
+        else:
+            if item.repetitions == 0:
+                item.interval = 1
+            elif item.repetitions == 1:
+                item.interval = 6
+            else:
+                item.interval = round(item.interval * item.ease_factor)
+
+            item.repetitions += 1
+
+            if grade == 3:
+                item.ease_factor += 0.15
+
+        # 3. Timezone-Aware Scheduling
+        user_tz_string = getattr(request.user, "timezone", "UTC")
+        try:
+            user_tz = ZoneInfo(user_tz_string)
+        except Exception:
+            user_tz = ZoneInfo("UTC")
+
+        now_local = timezone.now().astimezone(user_tz)
+        target_local_date = now_local.date() + datetime.timedelta(
+            days=max(1, item.interval)
+        )
+        new_midnight_local = datetime.datetime.combine(
+            target_local_date, datetime.time.min, tzinfo=user_tz
+        )
+
+        item.next_review_date = new_midnight_local.astimezone(datetime.timezone.utc)
+        item.total_points_earned += points_earned
+
+        # 4. Atomic Database Execution
+        try:
+            with transaction.atomic():
+                item.save()
+
+                ReviewLog.objects.create(
+                    user=request.user,
+                    reflection=item,
+                    grade=grade,
+                    points_awarded=points_earned,
+                    was_in_grace_period=False,
+                )
+        except Exception:
+            traceback.print_exc()
+            return Response(
+                {"error": "Database transaction failed."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {
+                "message": "Grade processed successfully.",
+                "new_interval": item.interval,
+                "next_review_date": item.next_review_date,
+                "points_awarded": points_earned,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ReviewQueueView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReflectionQueueSerializer
+
+    def get_queryset(self):
+        # Fetch items belonging to the user where next_review_date is NOW or in the past
+        return Reflection.objects.filter(
+            user=self.request.user, is_active=True, next_review_date__lte=timezone.now()
+        ).order_by("next_review_date")

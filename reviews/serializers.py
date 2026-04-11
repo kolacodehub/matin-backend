@@ -13,3 +13,16 @@ class ReflectionIngestionSerializer(serializers.ModelSerializer):
                 "ayah_key must be in the format 'Surah:Ayah' (e.g., '2:255')."
             )
         return value
+
+
+class ReflectionQueueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reflection
+        fields = [
+            "id",
+            "ayah_key",
+            "reflection_text",
+            "interval",
+            "repetitions",
+            "next_review_date",
+        ]
