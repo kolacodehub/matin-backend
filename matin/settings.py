@@ -35,13 +35,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "rest_framework",
-    "rest_framework.authtoken",  # For our local API tokens
+    "rest_framework.authtoken",
+    "corsheaders",
     # Local Apps
     "accounts",
     "reviews",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -136,3 +138,12 @@ QF_CLIENT_ID = os.environ.get("QF_CLIENT_ID")
 QF_CLIENT_SECRET = os.environ.get("QF_CLIENT_SECRET")
 QF_OAUTH_URL = os.environ.get("QF_OAUTH_URL")
 QF_API_URL = os.environ.get("QF_API_URL")
+
+
+# CORS Security Settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+# Allow cookies and auth headers to pass through
+CORS_ALLOW_CREDENTIALS = True
