@@ -44,7 +44,7 @@ class ReviewLog(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="review_logs"
     )
     reflection = models.ForeignKey(
-        Reflection, on_delete=models.CASCADE, related_name="review_logs"
+        Reflection, on_delete=models.CASCADE, related_name="review_logs", null=True, blank=True
     )
 
     # The Action

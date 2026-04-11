@@ -1,5 +1,7 @@
 import datetime
 import traceback
+from django.db.models import Sum, F
+from datetime import timedelta
 from zoneinfo import ZoneInfo
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
@@ -161,3 +163,57 @@ class ReviewQueueView(ListAPIView):
         return Reflection.objects.filter(
             user=self.request.user, is_active=True, next_review_date__lte=timezone.now()
         ).order_by("next_review_date")
+
+class BuyGracePeriodView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        GRACE_PERIOD_COST = 500
+
+        # 1. Calculate the user's real-time wallet balance from the ledger
+        wallet_balance = (
+            ReviewLog.objects.filter(user=request.user).aggregate(
+                Sum("points_awarded")
+            )["points_awarded__sum"]
+            or 0
+        )
+
+        # 2. Check for sufficient funds
+        if wallet_balance < GRACE_PERIOD_COST:
+            return Response(
+                {
+                    "error": f"Insufficient funds. You need {GRACE_PERIOD_COST} points, but have {wallet_balance}."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+                # 3. Bulk-shift every active item's due date forward by exactly 24 hours
+                Reflection.objects.filter(user=request.user, is_active=True).update(
+                    next_review_date=F("next_review_date") + timedelta(days=1)
+                )
+
+                # 4. Charge the user by writing a negative transaction to the Ledger
+                ReviewLog.objects.create(
+                    user=request.user,
+                    reflection=None,  # This is a global purchase, so it doesn't tie to a single flashcard
+                    grade=None,
+                    points_awarded=-GRACE_PERIOD_COST,
+                    was_in_grace_period=False,
+                )
+
+        except Exception:
+            traceback.print_exc()
+            return Response(
+                {"error": "Database transaction failed."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {
+                "message": "Grace period activated. All due dates pushed back by 24 hours.",
+                "new_balance": wallet_balance - GRACE_PERIOD_COST,
+            },
+            status=status.HTTP_200_OK,
+        )
