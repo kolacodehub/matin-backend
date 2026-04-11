@@ -217,3 +217,16 @@ class BuyGracePeriodView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class BalanceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        balance = (
+            ReviewLog.objects.filter(user=request.user).aggregate(
+                total=Sum("points_awarded")
+            )["total"]
+            or 0
+        )
+
+        return Response({"balance": balance})
