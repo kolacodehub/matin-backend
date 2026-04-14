@@ -3,12 +3,17 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, qf_sub_id, **extra_fields):
+    def create_user(self, qf_sub_id, password=None, **extra_fields):
         if not qf_sub_id:
             raise ValueError("The QF Subject ID must be set")
         user = self.model(qf_sub_id=qf_sub_id, **extra_fields)
-        # We don't use set_password() because QF handles passwords
-        user.set_unusable_password()
+
+        if password:
+            user.set_password(password)
+        else:
+            # This is for your regular Quran Foundation users
+            user.set_unusable_password()
+
         user.save(using=self._db)
         return user
 

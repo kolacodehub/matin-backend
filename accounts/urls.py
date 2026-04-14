@@ -1,8 +1,7 @@
 from django.urls import path
-from .views import QFAuthExchangeView, qf_login_redirect, qf_callback
+from .views import QFAuthExchangeView, LogoutView
 
 urlpatterns = [
     path("qf-exchange/", QFAuthExchangeView.as_view(), name="qf-exchange"),
-    path("login/", qf_login_redirect, name="qf-login"),
-    path("callback/", qf_callback, name="qf-callback"),
+    path("logout/", LogoutView.as_view(), name="logout"), # <-- ADD THIS
 ]
