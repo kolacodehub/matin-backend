@@ -16,8 +16,10 @@ class QFAuthExchangeView(APIView):
     permission_classes = []
 
     def post(self, request):
+
         code = request.data.get("code")
         redirect_uri = request.data.get("redirect_uri")
+        code_verifier = request.data.get("code_verifier") # <-- GET IT FROM REACT
 
         if not code or not redirect_uri:
             return Response(
@@ -31,6 +33,7 @@ class QFAuthExchangeView(APIView):
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": redirect_uri,
+            "code_verifier": code_verifier,
         }
         data = urllib.parse.urlencode(payload_dict).encode("utf-8")
 

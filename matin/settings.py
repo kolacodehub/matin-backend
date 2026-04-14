@@ -148,5 +148,3 @@ CORS_ALLOWED_ORIGINS = [
 # Allow cookies and auth headers to pass through
 CORS_ALLOW_CREDENTIALS = True
 
-
-
