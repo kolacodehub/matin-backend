@@ -73,6 +73,8 @@ class QFAuthExchangeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        user_timezone = request.data.get("timezone", "UTC")
+
         # Logical validation of claims (Zero crypto cost, high security)
         try:
             decoded_id_token = jwt.decode(
@@ -114,6 +116,7 @@ class QFAuthExchangeView(APIView):
             defaults={
                 "qf_access_token": token_data.get("access_token"),
                 "qf_refresh_token": refresh_token,
+                "timezone": user_timezone,
             },
         )
 
@@ -144,4 +147,3 @@ class LogoutView(APIView):
                 {"error": "Failed to log out."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
