@@ -159,10 +159,24 @@ class ReviewQueueView(ListAPIView):
     serializer_class = ReflectionQueueSerializer
 
     def get_queryset(self):
-        # Fetch items belonging to the user where next_review_date is NOW or in the past
+        user = self.request.user
+
+        # 1. Grab the user's timezone string (defaults to UTC if missing)
+        tz_string = getattr(user, "timezone", "UTC")
+        user_tz = ZoneInfo(tz_string)
+
+        # 2. Convert current UTC time to the user's exact local time
+        local_now = timezone.localtime(timezone.now(), timezone=user_tz)
+
+        # 3. Filter using the local time
         return Reflection.objects.filter(
-            user=self.request.user, is_active=True, next_review_date__lte=timezone.now()
+            user=user,
+            is_active=True,
+            # IMPORTANT: If next_review_date is a models.DateField(), use local_now.date()
+            # If it is a models.DateTimeField(), use local_now
+            next_review_date__lte=local_now,
         ).order_by("next_review_date")
+
 
 class BuyGracePeriodView(APIView):
     permission_classes = [IsAuthenticated]
