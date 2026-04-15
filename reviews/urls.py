@@ -14,4 +14,3 @@ urlpatterns = [
     path("buy-grace/", BuyGracePeriodView.as_view(), name="buy-grace"),
     path("balance/", BalanceView.as_view(), name="balance"), 
 ]
-

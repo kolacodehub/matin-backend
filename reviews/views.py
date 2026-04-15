@@ -1,6 +1,8 @@
+import requests
 import datetime
 import traceback
 from django.db.models import Sum, F
+from django.conf import settings  # Needed to grab your QF_CLIENT_ID
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 from rest_framework.views import APIView
@@ -20,25 +22,42 @@ class IngestReflectionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # 1. Validate using your original serializer
         serializer = ReflectionIngestionSerializer(data=request.data)
 
         if not serializer.is_valid():
+            print("🚨 SERIALIZER ERRORS:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        ayah_key = serializer.validated_data["ayah_key"]
+        reflection_text = serializer.validated_data["reflection_text"]
+
+        # 2. Parse the ayah_key for the QF API before saving
+        try:
+            chapter_id, verse_number = ayah_key.split(":")
+            chapter_id = int(chapter_id)
+            verse_number = int(verse_number)
+        except ValueError:
+            return Response(
+                {"error": "Invalid ayah_key format. Must be 'chapter:verse'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         INGESTION_REWARD = 5
 
+        # 3. Your Original Spaced Repetition & Gamification Engine
         try:
             with transaction.atomic():
-                # 1. Create the Reflection (state machine)
+                # Create the Reflection (state machine)
                 reflection = Reflection.objects.create(
                     user=request.user,
-                    ayah_key=serializer.validated_data["ayah_key"],
-                    reflection_text=serializer.validated_data["reflection_text"],
+                    ayah_key=ayah_key,
+                    reflection_text=reflection_text,
                     next_review_date=get_next_midnight_for_user(request.user),
                     total_points_earned=INGESTION_REWARD,
                 )
 
-                # 2. Create the immutable ledger entry
+                # Create the immutable ledger entry
                 ReviewLog.objects.create(
                     user=request.user,
                     reflection=reflection,
@@ -46,7 +65,6 @@ class IngestReflectionView(APIView):
                     points_awarded=INGESTION_REWARD,
                     was_in_grace_period=False,
                 )
-
         except Exception:
             traceback.print_exc()  # prints full traceback to terminal
             return Response(
@@ -54,9 +72,41 @@ class IngestReflectionView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # 4. The Hackathon Magic: Sync to Quran Foundation
+        qf_post_url = "https://apis-prelive.quran.foundation/quran-reflect/v1/posts"
+        headers = {
+            "x-auth-token": request.user.qf_access_token,
+            "x-client-id": settings.QF_CLIENT_ID,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        payload = {
+            "post": {
+                "body": reflection_text,
+                "draft": False,
+                "references": [
+                    {"chapterId": chapter_id, "from": verse_number, "to": verse_number}
+                ],
+            }
+        }
+
+        try:
+            # Fire the request to QF (Notice this happens AFTER the database is safely updated)
+            qf_response = requests.post(
+                qf_post_url, json=payload, headers=headers, timeout=30
+            )
+            qf_response.raise_for_status()
+            sync_status = "Synced to Quran Foundation."
+        except requests.exceptions.RequestException as e:
+            print(f"[QF SYNC ERROR] {str(e)}")
+            sync_status = "Saved locally, but failed to sync to Quran Foundation."
+
+        # 5. Return the merged response (Points + Sync Status!)
         return Response(
             {
                 "message": "Reflection ingested successfully.",
+                "sync_status": sync_status,
                 "reflection_id": reflection.id,
                 "points_earned": INGESTION_REWARD,
                 "next_review_date": reflection.next_review_date,
@@ -232,6 +282,7 @@ class BuyGracePeriodView(APIView):
             status=status.HTTP_200_OK,
         )
 
+
 class BalanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -244,3 +295,5 @@ class BalanceView(APIView):
         )
 
         return Response({"balance": balance})
+
+
