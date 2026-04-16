@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
 from pathlib import Path
@@ -19,10 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-SECRET_KEY = "django-insecure-s&!m^=w290ag_vzqhuxz&4j8nny@a)^zpwx=dq#i$d6jihqy7c"
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-s&!m^=w290ag_vzqhuxz&4j8nny@a)^zpwx=dq#i$d6jihqy7c"
+)
 
+allowed_hosts_env = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",")]
 
 # Application definition
 
@@ -46,6 +50,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -76,15 +81,13 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Defaults to local SQLite if DATABASE_URL is not provided (for local dev)
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),
-        "PORT": os.environ.get("DB_PORT"),
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL", f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -120,7 +123,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Configure custom settings
 AUTH_USER_MODEL = "accounts.User"
@@ -138,11 +144,8 @@ QF_OAUTH_URL = os.environ.get("QF_OAUTH_URL")
 QF_API_URL = os.environ.get("QF_API_URL")
 
 
-# CORS Security Settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(",")]
 
 # Allow cookies and auth headers to pass through
 CORS_ALLOW_CREDENTIALS = True
-
