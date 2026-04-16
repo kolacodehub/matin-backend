@@ -50,7 +50,7 @@ class ReviewLog(models.Model):
     # The Action
     reviewed_at = models.DateTimeField(default=timezone.now)
     grade = models.IntegerField(choices=GRADE_CHOICES, null=True, blank=True)
-    
+
     # The Economic Result
     points_awarded = models.IntegerField()
     was_in_grace_period = models.BooleanField(default=False)
@@ -62,4 +62,7 @@ class ReviewLog(models.Model):
         ]
 
     def __str__(self):
-        return f"Log {self.id} - Ref {self.reflection.id} - Grade {self.grade}"
+        ref_id = self.reflection.id if self.reflection else "Store Purchase"
+        grade_text = self.grade if self.grade is not None else "N/A"
+
+        return f"Log {self.id} - Ref: {ref_id} - Grade: {grade_text}"
