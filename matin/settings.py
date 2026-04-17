@@ -84,14 +84,18 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # Defaults to local SQLite if DATABASE_URL is not provided (for local dev)
 # settings.py
 
+
+
+# 1. Parse the URL
 DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
-        # ADD THIS BLOCK BELOW
-        options={"options": "-c search_path=matin_schema,public"},
     )
 }
+
+# 2. Add the OPTIONS dictionary to the result
+DATABASES["default"]["OPTIONS"] = {"options": "-c search_path=matin_schema,public"}
 
 
 # Password validation
