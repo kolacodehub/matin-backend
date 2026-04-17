@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 8000
 
 # The command to run the app
-CMD ["gunicorn", "matin.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD sh -c "python manage.py migrate --noinput && gunicorn matin.wsgi:application --bind 0.0.0.0:8000"
