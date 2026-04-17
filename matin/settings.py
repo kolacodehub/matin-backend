@@ -82,11 +82,14 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # Defaults to local SQLite if DATABASE_URL is not provided (for local dev)
+# settings.py
+
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
-        conn_health_checks=True,
+        # ADD THIS BLOCK BELOW
+        options={"options": "-c search_path=matin_schema,public"},
     )
 }
 

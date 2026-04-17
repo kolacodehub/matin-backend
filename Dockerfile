@@ -25,6 +25,7 @@ COPY . .
 EXPOSE 8000
 
 # The command to run the app
-CMD sh -c "python manage.py shell -c \"from django.db import connection; c = connection.cursor(); c.execute('GRANT ALL ON SCHEMA public TO PUBLIC; GRANT ALL ON SCHEMA public TO \\\"dev-db-202826\\\";')\" && python manage.py migrate --noinput && gunicorn matin.wsgi:application --bind 0.0.0.0:8000"
+CMD sh -c "python manage.py migrate --noinput && gunicorn matin.wsgi:application --bind 0.0.0.0:8000"
+# CMD sh -c "python manage.py shell -c \"from django.db import connection; c = connection.cursor(); c.execute('GRANT ALL ON SCHEMA public TO PUBLIC; GRANT ALL ON SCHEMA public TO \\\"dev-db-202826\\\";')\" && python manage.py migrate --noinput && gunicorn matin.wsgi:application --bind 0.0.0.0:8000"
 # CMD sh -c "python manage.py migrate --noinput && gunicorn matin.wsgi:application --bind 0.0.0.0:8000"
 # CMD ["gunicorn", "matin.wsgi:application", "--bind", "0.0.0.0:8000"]
