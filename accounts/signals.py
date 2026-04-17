@@ -9,7 +9,7 @@ def password_reset_token_created(
 ):
     # In production, this would be my React frontend URL.
     # I will print it to the console so I can test it locally.
-    reset_url = f"http://localhost:3000/reset-password?token={reset_password_token.key}"
+    reset_url = f"https://matin-frontend.vercel.app/reset-password?token={reset_password_token.key}"
     print(f"\n=== PASSWORD RESET EMAIL ===")
     print(f"Send to: {reset_password_token.user.email}")
     print(f"Reset Link: {reset_url}")
