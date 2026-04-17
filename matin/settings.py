@@ -85,8 +85,6 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # settings.py
 
 
-
-# 1. Parse the URL
 DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
@@ -94,8 +92,11 @@ DATABASES = {
     )
 }
 
-# 2. Add the OPTIONS dictionary to the result
+# Force Django to bypass DO's locked public schema
 DATABASES["default"]["OPTIONS"] = {"options": "-c search_path=matin_schema,public"}
+
+# Also, ensure your hosts allow the DigitalOcean URL
+ALLOWED_HOSTS = ["*"]  # You can lock this down to your specific URL later
 
 
 # Password validation
