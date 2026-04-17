@@ -99,8 +99,6 @@ DATABASES = {
     )
 }
 
-# 3. Apply the DigitalOcean Schema Bypass (for when it actually connects)
-DATABASES["default"]["OPTIONS"] = {"options": "-c search_path=matin_schema,public"}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
