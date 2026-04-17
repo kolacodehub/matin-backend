@@ -85,19 +85,22 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # settings.py
 
 
+
+# 1. Safely grab the URL and provide a dummy SQLite fallback for the build phase
+db_url = os.getenv("DATABASE_URL")
+if not db_url or db_url.startswith("://"):
+    db_url = "sqlite:///dummy.sqlite3"
+
+# 2. Configure the database
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
+        default=db_url,
         conn_max_age=600,
     )
 }
 
-# Force Django to bypass DO's locked public schema
+# 3. Apply the DigitalOcean Schema Bypass (for when it actually connects)
 DATABASES["default"]["OPTIONS"] = {"options": "-c search_path=matin_schema,public"}
-
-# Also, ensure your hosts allow the DigitalOcean URL
-ALLOWED_HOSTS = ["*"]  # You can lock this down to your specific URL later
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
