@@ -84,19 +84,11 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # Defaults to local SQLite if DATABASE_URL is not provided (for local dev)
 # settings.py
 
-
-# 1. Safely grab the URL and provide a dummy SQLite fallback for the build phase
-db_url = os.getenv("DATABASE_URL")
-if not db_url or db_url.startswith("://"):
-    db_url = "sqlite:///db.sqlite3"
-
-# 2. Configure the database
 DATABASES = {
-    "default": dj_database_url.config(
-        default="sqlite:///db.sqlite3",  # fallback for build time
-        conn_max_age=600,
-        ssl_require=False,
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 
