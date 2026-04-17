@@ -85,17 +85,17 @@ WSGI_APPLICATION = "matin.wsgi.application"
 # settings.py
 
 
-
 # 1. Safely grab the URL and provide a dummy SQLite fallback for the build phase
 db_url = os.getenv("DATABASE_URL")
 if not db_url or db_url.startswith("://"):
-    db_url = "sqlite:///dummy.sqlite3"
+    db_url = "sqlite:///db.sqlite3"
 
 # 2. Configure the database
 DATABASES = {
     "default": dj_database_url.config(
-        default=db_url,
+        default="sqlite:///db.sqlite3",  # fallback for build time
         conn_max_age=600,
+        ssl_require=False,
     )
 }
 
