@@ -115,6 +115,17 @@ class IngestReflectionView(APIView):
         )
 
 
+class ReflectionListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReflectionQueueSerializer
+
+    def get_queryset(self):
+        # Fetch ALL active reflections for this user, newest first
+        return Reflection.objects.filter(
+            user=self.request.user, is_active=True
+        ).order_by("-created_at")
+
+
 class GradeReviewView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -295,5 +306,3 @@ class BalanceView(APIView):
         )
 
         return Response({"balance": balance})
-
-

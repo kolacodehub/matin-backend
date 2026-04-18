@@ -24,5 +24,6 @@ class ReflectionQueueSerializer(serializers.ModelSerializer):
             "reflection_text",
             "interval",
             "repetitions",
+            "created_at",
             "next_review_date",
         ]
