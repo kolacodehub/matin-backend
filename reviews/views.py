@@ -2,7 +2,7 @@ import requests
 import datetime
 import traceback
 from django.db.models import Sum, F
-from django.conf import settings  # Needed to grab your QF_CLIENT_ID
+from django.conf import settings
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 from rest_framework.views import APIView
@@ -22,7 +22,7 @@ class IngestReflectionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # 1. Validate using your original serializer
+        # 1. Validate using original serializer
         serializer = ReflectionIngestionSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -175,9 +175,7 @@ class GradeReviewView(APIView):
             user_tz = ZoneInfo("UTC")
 
         now_local = timezone.now().astimezone(user_tz)
-        target_local_date = now_local.date() + datetime.timedelta(
-            days=max(1, item.interval)
-        )
+        target_local_date = now_local.date() + datetime.timedelta(days=item.interval)
         new_midnight_local = datetime.datetime.combine(
             target_local_date, datetime.time.min, tzinfo=user_tz
         )
@@ -233,8 +231,6 @@ class ReviewQueueView(ListAPIView):
         return Reflection.objects.filter(
             user=user,
             is_active=True,
-            # IMPORTANT: If next_review_date is a models.DateField(), use local_now.date()
-            # If it is a models.DateTimeField(), use local_now
             next_review_date__lte=local_now,
         ).order_by("next_review_date")
 
@@ -245,7 +241,23 @@ class BuyGracePeriodView(APIView):
     def post(self, request):
         GRACE_PERIOD_COST = 500
 
-        # 1. Calculate the user's real-time wallet balance from the ledger
+        # 1. THE COOLDOWN CHECK: Did they buy this in the last 24 hours?
+        recent_grace = ReviewLog.objects.filter(
+            user=request.user,
+            grade=None,
+            points_awarded=-GRACE_PERIOD_COST,
+            reviewed_at__gte=timezone.now() - timedelta(hours=24),
+        ).exists()
+
+        if recent_grace:
+            return Response(
+                {
+                    "error": "Grace Period is already active. You can only use this once every 24 hours."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2. Calculate the user's real-time wallet balance from the ledger
         wallet_balance = (
             ReviewLog.objects.filter(user=request.user).aggregate(
                 Sum("points_awarded")
