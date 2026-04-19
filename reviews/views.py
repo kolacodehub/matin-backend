@@ -94,7 +94,7 @@ class IngestReflectionView(APIView):
         try:
             # Fire the request to QF (Notice this happens AFTER the database is safely updated)
             qf_response = requests.post(
-                qf_post_url, json=payload, headers=headers, timeout=30
+                qf_post_url, json=payload, headers=headers, timeout=60
             )
             qf_response.raise_for_status()
             sync_status = "Synced to Quran Foundation."
