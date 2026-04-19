@@ -153,8 +153,11 @@ QF_OAUTH_URL = os.environ.get("QF_OAUTH_URL")
 QF_API_URL = os.environ.get("QF_API_URL")
 
 
-cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(",")]
+# cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+# CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(",")]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Allow cookies and auth headers to pass through
 CORS_ALLOW_CREDENTIALS = True
